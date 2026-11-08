@@ -10,9 +10,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const vite = resolve(root, 'node_modules', 'vite', 'bin', 'vite.js');
 mkdirSync(resolve(root, 'lessons'), { recursive: true });
 
-for (const { entry, out } of PAGES) {
+for (const { entry, out, env } of PAGES) {
   const outDir = `dist/${basename(entry, '.html')}`;
-  const r = spawnSync(process.execPath, [vite, 'build'], { cwd: root, stdio: 'inherit', env: { ...process.env, CU_ENTRY: entry, CU_OUT: outDir } });
+  const r = spawnSync(process.execPath, [vite, 'build'], { cwd: root, stdio: 'inherit', env: { ...process.env, ...env, CU_ENTRY: entry, CU_OUT: outDir } });
   if (r.status !== 0) { console.error(`build ${entry} ล้มเหลว`); process.exit(r.status || 1); }
   const dest = resolve(root, 'lessons', out);
   copyFileSync(resolve(root, outDir, basename(entry)), dest);

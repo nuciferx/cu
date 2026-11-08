@@ -3,7 +3,10 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
-const files = import.meta.glob('../../assets/polyfork/*.glb', { query: '?url', import: 'default', eager: true });
+// บทที่ใช้แค่คนเดียว build ด้วย VITE_CU_MODELS=person (ดู scripts/pages.mjs) → ฝังเฉพาะโมเดลคน ไม่ฝังทั้งชุด · ไม่ตั้ง = ทุกโมเดลเหมือนเดิม
+const files = import.meta.env.VITE_CU_MODELS === 'person'
+  ? import.meta.glob('../../assets/polyfork/suburban-resident*.glb', { query: '?url', import: 'default', eager: true })
+  : import.meta.glob('../../assets/polyfork/*.glb', { query: '?url', import: 'default', eager: true });
 
 const store = new Map(); // slug -> Group (ปรับแล้ว)
 

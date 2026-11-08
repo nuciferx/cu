@@ -43,13 +43,13 @@ export function bindStepNav(getIdx, goStep) {
   $('stepbar').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) goStep(+b.dataset.i); });
 }
 
-// ปุ่มมุมมอง 3 มิติ/ด้านบน
-export function bindViewButtons(getApi) {
+// ปุ่มมุมมอง · ค่าตั้งต้น 3 มิติ/ด้านบน (บทระยะร่น) · บทอื่นส่ง views เองได้ เช่น [['v3d','3d'],['vside','side']] · onChange(m) เรียกหลังเปลี่ยนมุม
+export function bindViewButtons(getApi, views = [['v3d', '3d'], ['vtop', 'top']], onChange) {
   const set = (m) => {
     getApi().setView(m);
-    for (const [id, v] of [['v3d', '3d'], ['vtop', 'top']]) { $(id).classList.toggle('on', m === v); $(id).setAttribute('aria-pressed', m === v); }
+    for (const [id, v] of views) { $(id).classList.toggle('on', m === v); $(id).setAttribute('aria-pressed', m === v); }
+    onChange?.(m);
   };
-  $('v3d').addEventListener('click', () => set('3d'));
-  $('vtop').addEventListener('click', () => set('top'));
+  for (const [id, v] of views) $(id).addEventListener('click', () => set(v));
   return set;
 }

@@ -172,3 +172,29 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .ocard .none { color: var(--unk); background: var(--unk-bg); display: inline-block; padding: 2px 10px; border-radius: 8px; font-size: .88rem; margin: 2px 0; }
 .ocard .legal { margin: 6px 0 0; font-size: .85rem; color: var(--muted); }
 .tablewrap { overflow-x: auto; }
+
+/* ---------- บทที่ 2 อาคารขนาดใหญ่ · อาคารสูง ---------- */
+.badge.yes { background: var(--accent); color: #fff; } .badge.no { background: var(--line); color: var(--muted); }
+.rule.yes { border-left-color: var(--accent); } .rule.no { border-left-color: var(--line); }
+.rule.nested { margin-left: 14px; }
+.lesson02 .rule { cursor: default; }
+.rule .alt { margin: 4px 0 0; font-size: .85rem; color: var(--unk); }
+.sl.full { grid-column: 1 / -1; display: block; }
+.sl.full[hidden], .sl[hidden] { display: none; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; cursor: pointer; }
+.chk input { margin-top: 5px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.seglabel { display: block; font-size: .92rem; margin-bottom: 4px; }
+.segs { display: flex; flex-wrap: wrap; gap: 6px; }
+.segs .btn.on, #c-preset.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.meters { display: grid; gap: 10px; margin: 4px 0 10px; }
+.meter { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bg); }
+.mhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .92rem; }
+.mnum { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.mbar { position: relative; height: 14px; border-radius: 7px; background: var(--line); margin: 6px 0 22px; }
+.mbar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; background: var(--accent); transition: width .35s ease; opacity: .85; }
+.mbar .fill.over { background: var(--fail); }
+.mbar .mt { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 2px solid var(--fg); }
+.mbar .mt s { position: absolute; top: 100%; left: 0; transform: translateX(-50%); font-size: .72rem; color: var(--muted); text-decoration: none; margin-top: 2px; white-space: nowrap; }
+.msub { margin: -14px 0 0; font-size: .8rem; color: var(--muted); }
+@media (min-width: 1000px) { .lesson02 .sliders { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .mbar .fill { transition: none; } }

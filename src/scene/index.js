@@ -12,10 +12,16 @@ const COLORS = {
 };
 
 let host, renderer, scene, persp, ortho, controls3d, controlsTop, sun, hemi;
-let userMoved = false;
+let userMoved = false, sideMoved = false;
 let mode = '3d', dark = false, needsRender = true, modelsReady = false;
 let params = null, results = [], opts = {};
-let hooks = {}; // ตัวขยายของบทอื่น: { buildBuilding, buildOverlay, onPick, onFrame }
+// ตัวขยายของบทอื่น (ไม่ใส่ = ฉากที่ดิน/ถนน/คลองของบทระยะร่นเหมือนเดิม):
+//   buildBuilding(group, params, opts) · buildOverlay(group, params, results, opts) · onPick(part) · onFrame()
+//   buildStatic(group, params, { dark, colors }) : วาดพื้นฉากแทนที่ดิน/ถนน/คลอง/ตึกแถว (เช่น พื้นเรียบ)
+//   fit3d(params, aspect) → { pos:{x,y,z}, target:{x,y,z} } พิกัดฉาก : จัดกล้อง 3 มิติเอง (ตามขนาดอาคาร)
+//   sideBounds(params) → { x0, x1, y0, y1 } พิกัดฉาก : กรอบที่มุม 'side' (มองด้านข้างตรงๆ) ต้องเห็น
+//   camera: { maxDistance, far } : ขยายระยะกล้องสำหรับอาคารสูง
+let hooks = {};
 const frameCbs = [];
 let staticSig = '', staticGroup, canalGroup, buildingGroup, overlayGroup, gridGroup;
 const mats = {};
@@ -48,8 +54,11 @@ export async function initScene(container, extraHooks = {}) {
   controlsTop.maxZoom = 12;
   controlsTop.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
   controlsTop.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+  if (hooks.camera?.maxDistance) controls3d.maxDistance = hooks.camera.maxDistance;
+  if (hooks.camera?.far) { persp.far = hooks.camera.far; ortho.far = hooks.camera.far; persp.updateProjectionMatrix(); ortho.updateProjectionMatrix(); }
   for (const c of [controls3d, controlsTop]) c.addEventListener('change', invalidate);
   controls3d.addEventListener('start', () => { userMoved = true; tween = null; });
+  controlsTop.addEventListener('start', () => { if (mode === 'side') sideMoved = true; });
   controlsTop.enabled = false;
 
   for (const n of ['static', 'canal', 'building', 'overlay', 'grid']) {
@@ -81,7 +90,7 @@ function resize() {
   renderer.setSize(w, h, false);
   renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%';
   persp.aspect = w / h; persp.updateProjectionMatrix();
-  if (params) { fitTop(); if (!userMoved) fit3d(); }
+  if (params) { if (mode === 'side') fitSide(); else fitTop(); if (!userMoved) fit3d(); }
   invalidate();
 }
 
@@ -97,6 +106,13 @@ function applyTheme() {
 function lotCenter() { return params ? new THREE.Vector3(params.lot.width / 2, 0, -params.lot.depth / 2) : new THREE.Vector3(); }
 
 function fit3d() {
+  if (hooks.fit3d) {
+    const f = hooks.fit3d(params, (host.clientWidth || 1) / (host.clientHeight || 1));
+    persp.position.set(f.pos.x, f.pos.y, -f.pos.z);
+    controls3d.target.set(f.target.x, f.target.y, -f.target.z);
+    controls3d.update();
+    return;
+  }
   const { lot } = params;
   const c = lotCenter();
   const span = Math.max(lot.width, lot.depth);
@@ -127,11 +143,29 @@ function fitTop() {
   invalidate();
 }
 
+// มุม 'side': มองด้านข้างตรงๆ (กล้องขนาน ไม่มีมุมเอียง) เห็นความสูงอ่านเมตรได้ · ใช้เมื่อบทใส่ hooks.sideBounds
+function fitSide() {
+  const b = hooks.sideBounds(params);
+  const aspect = (host.clientWidth || 1) / (host.clientHeight || 1);
+  const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+  let halfH = (b.y1 - b.y0) / 2, halfW = halfH * aspect;
+  if (halfW < (b.x1 - b.x0) / 2) { halfW = (b.x1 - b.x0) / 2; halfH = halfW / aspect; }
+  ortho.left = -halfW; ortho.right = halfW; ortho.top = halfH; ortho.bottom = -halfH;
+  ortho.zoom = 1;
+  ortho.up.set(0, 1, 0);
+  ortho.position.set(cx, cy, 300); // กล้องอยู่ฝั่งถนน (three +z) มองไปทาง -z
+  controlsTop.target.set(cx, cy, 0);
+  ortho.updateProjectionMatrix();
+  controlsTop.update();
+  invalidate();
+}
+
 export function setView(m) {
   mode = m;
+  sideMoved = false;
   controls3d.enabled = m === '3d';
-  controlsTop.enabled = m === 'top';
-  if (params) { if (m === 'top') fitTop(); else fit3d(); }
+  controlsTop.enabled = m === 'top' || m === 'side';
+  if (params) { if (m === 'top') fitTop(); else if (m === 'side') fitSide(); else fit3d(); }
   gridGroup.visible = true;
   rebuildGrid();
   invalidate();
@@ -185,6 +219,8 @@ export function updateScene(sceneParams, ruleResults, options = {}) {
   const first = !params;
   params = sceneParams; results = ruleResults || []; opts = options;
   if (first) { fit3d(); fitTop(); }
+  else if (hooks.fit3d && mode === '3d' && !userMoved) fit3d(); // อาคารเปลี่ยนขนาด → กล้องถอย/เข้าตาม ถ้าผู้เรียนยังไม่ได้ลากเอง
+  if (mode === 'side' && !sideMoved) fitSide();
   rebuild();
 }
 
@@ -209,6 +245,7 @@ function slab(x0, z0, x1, z1, y, color, thick = 0.02) {
 function buildStatic() {
   disposeGroup(staticGroup); disposeGroup(canalGroup);
   const c = COLORS[dark ? 'dark' : 'light'];
+  if (hooks.buildStatic) { hooks.buildStatic(staticGroup, params, { dark, colors: c }); return; }
   const { lot, road, canal } = params;
   const W = lot.width, D = lot.depth, R = road.width;
   const cw = canal ? canal.width : 0;
