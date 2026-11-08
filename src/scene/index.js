@@ -15,10 +15,13 @@ let host, renderer, scene, persp, ortho, controls3d, controlsTop, sun, hemi;
 let userMoved = false;
 let mode = '3d', dark = false, needsRender = true, modelsReady = false;
 let params = null, results = [], opts = {};
+let hooks = {}; // ตัวขยายของบทอื่น: { buildBuilding, buildOverlay, onPick, onFrame }
+const frameCbs = [];
 let staticSig = '', staticGroup, canalGroup, buildingGroup, overlayGroup, gridGroup;
 const mats = {};
 
-export async function initScene(container) {
+export async function initScene(container, extraHooks = {}) {
+  hooks = extraHooks;
   host = container;
   renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -46,7 +49,7 @@ export async function initScene(container) {
   controlsTop.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
   controlsTop.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
   for (const c of [controls3d, controlsTop]) c.addEventListener('change', invalidate);
-  controls3d.addEventListener('start', () => { userMoved = true; });
+  controls3d.addEventListener('start', () => { userMoved = true; tween = null; });
   controlsTop.enabled = false;
 
   for (const n of ['static', 'canal', 'building', 'overlay', 'grid']) {
@@ -61,12 +64,14 @@ export async function initScene(container) {
   resize();
   requestAnimationFrame(loop);
 
+  if (hooks.onFrame) frameCbs.push(hooks.onFrame);
+  setupPick();
   loadModels().then((n) => { modelsReady = n > 0; staticSig = ''; rebuild(); }).catch((e) => console.warn('models', e));
-  return { setView, setTheme, getView: () => mode, resize };
+  return { setView, setTheme, getView: () => mode, resize, invalidate, flyTo, resetCamera, project, three: { THREE, scene } };
 }
 
 function loop() {
-  if (needsRender) { needsRender = false; renderer.render(scene, mode === '3d' ? persp : ortho); }
+  if (needsRender) { needsRender = false; renderer.render(scene, mode === '3d' ? persp : ortho); for (const cb of frameCbs) cb(); }
   requestAnimationFrame(loop);
 }
 const invalidate = () => { needsRender = true; };
@@ -132,6 +137,49 @@ export function setView(m) {
   invalidate();
 }
 
+// ---------- ขยายสำหรับบทที่มีฉากโต้ตอบ (บทระยะร่นไม่ใช้) ----------
+// กล้องไหลไปมุมใหม่: pos/target เป็นพิกัดฉาก (x, y สูง, z ลึกจากถนน) — แปลงเป็นพิกัด three ให้เอง
+let tween = null;
+export function flyTo(pos, target, ms = 750) {
+  if (mode !== '3d') return;
+  userMoved = true;
+  const p1 = new THREE.Vector3(pos.x, pos.y, -pos.z), t1 = new THREE.Vector3(target.x, target.y, -target.z);
+  const p0 = persp.position.clone(), t0 = controls3d.target.clone(), start = performance.now();
+  tween = { id: (tween?.id || 0) + 1 };
+  const id = tween.id;
+  const step = (now) => {
+    if (!tween || tween.id !== id) return;
+    const k = Math.min(1, (now - start) / ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    persp.position.lerpVectors(p0, p1, e); controls3d.target.lerpVectors(t0, t1, e); controls3d.update(); invalidate();
+    if (k < 1) requestAnimationFrame(step); else tween = null;
+  };
+  requestAnimationFrame(step);
+}
+export function resetCamera() { if (params && mode === '3d') { tween = null; userMoved = false; fit3d(); invalidate(); } }
+// พิกัดฉาก → พิกเซลในกล่องภาพ (ใช้วางจุดกดแบบ DOM ทับฉาก)
+const _v = new THREE.Vector3();
+export function project(x, y, z) {
+  _v.set(x, y, -z).project(mode === '3d' ? persp : ortho);
+  return { x: (_v.x * 0.5 + 0.5) * host.clientWidth, y: (-_v.y * 0.5 + 0.5) * host.clientHeight, visible: _v.z < 1 && _v.z > -1 };
+}
+// กดชิ้นส่วนในฉาก: แยกการ "กด" ออกจากการ "ลากหมุน" แล้วหา userData.part ของชิ้นที่โดน
+function setupPick() {
+  if (!hooks.onPick) return;
+  const el = renderer.domElement, ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  let down = null;
+  el.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
+  el.addEventListener('pointerup', (e) => {
+    if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) { down = null; return; }
+    down = null;
+    const r = el.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, mode === '3d' ? persp : ortho);
+    for (const h of ray.intersectObjects(buildingGroup.children, true)) {
+      for (let o = h.object; o; o = o.parent) if (o.userData?.part) { hooks.onPick(o.userData.part); return; }
+    }
+  });
+}
+
 // ---------- ฟังก์ชันเดียวที่ภายนอกเรียก ----------
 export function updateScene(sceneParams, ruleResults, options = {}) {
   const first = !params;
@@ -146,7 +194,7 @@ function rebuild() {
   if (sig !== staticSig) { staticSig = sig; buildStatic(); rebuildGrid(); }
   buildBuilding();
   disposeGroup(overlayGroup);
-  buildOverlay(overlayGroup, params, results, opts);
+  (hooks.buildOverlay || buildOverlay)(overlayGroup, params, results, opts);
   invalidate();
 }
 
@@ -252,6 +300,7 @@ function buildProps(W, D, R, cw) {
 
 function buildBuilding() {
   disposeGroup(buildingGroup);
+  if (hooks.buildBuilding) { hooks.buildBuilding(buildingGroup, params, opts); return; }
   const b = params.building;
   const m = new THREE.Mesh(new THREE.BoxGeometry(b.width, b.height, b.depth),
     new THREE.MeshStandardMaterial({ color: 0xff7a1a, flatShading: true, roughness: 0.8, transparent: true, opacity: 0.88 }));

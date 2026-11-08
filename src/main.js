@@ -3,6 +3,7 @@ import { checkRules } from './rules/check.js';
 import { RULES } from './rules/setback-rules.js';
 import { STEPS } from './lesson/steps.js';
 import credits from '../assets/polyfork/credits.json';
+import { $, esc, renderCredits, initTheme, showLawBox, renderStepHead, bindStepNav, bindViewButtons } from './shared/ui.js';
 
 const DEFAULTS = { lotW: 16, lotD: 30, road: 8, canal: 8, bx: 4, bz: 14, bw: 8, bd: 12, height: 7 };
 const state = { ...DEFAULTS };
@@ -21,12 +22,10 @@ const SLIDER_DEFS = [
   { key: 'bw', label: 'ความกว้างอาคาร', min: 3, max: () => state.lotW, step: 0.5, unit: 'ม.' },
   { key: 'bd', label: 'ความลึกอาคาร', min: 3, max: () => state.lotD, step: 0.5, unit: 'ม.' },
 ];
-const $ = (id) => document.getElementById(id);
 const resolve = (v) => (typeof v === 'function' ? v() : v);
 
 const WORD = { true: 'ผ่าน', false: 'ไม่ผ่าน', null: 'ไม่เกี่ยว/ยังไม่ตัดสิน' };
 const CLS = { true: 'pass', false: 'fail', null: 'unk' };
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const n1 = (v) => (Math.round(v * 100) / 100).toString();
 
 function sceneParams() {
@@ -79,13 +78,7 @@ function goStep(i) {
 
 function renderLesson() {
   const st = step();
-  $('stepcount').textContent = `ขั้น ${stepIdx + 1} จาก ${STEPS.length}`;
-  $('steptitle').textContent = st.title;
-  $('stepexplain').textContent = st.explain;
-  $('stepslides').textContent = `สไลด์ต้นฉบับ: ${st.slides.join(', ')}`;
-  $('prev').disabled = stepIdx === 0;
-  $('next').disabled = stepIdx === STEPS.length - 1;
-  $('stepbar').innerHTML = STEPS.map((s, i) => `<button type="button" class="btn${i === stepIdx ? ' on' : i < stepIdx ? ' done' : ''}" data-i="${i}" title="${esc(s.title)}" aria-label="ขั้น ${i + 1}: ${esc(s.title)}"${i === stepIdx ? ' aria-current="step"' : ''}>${i + 1}</button>`).join('');
+  renderStepHead(STEPS, stepIdx);
   $('rulesnote').textContent = st.showRules === 'all'
     ? 'กดที่กฎเพื่อเน้นเฉพาะข้อนั้นในฉาก (กดซ้ำเพื่อยกเลิก)'
     : (st.showRules.length ? 'ขั้นนี้แสดงเฉพาะกฎที่กำลังเรียน' : 'ขั้นนี้ยังไม่ตรวจกฎ กด "ถัดไป" เพื่อดูผล');
@@ -167,37 +160,20 @@ function renderOthers() {
 function showLaw(id, i) {
   const r = ruleOf(id);
   const s = i < 0 ? r.source : r.alternateSources[i];
-  $('lawbody').innerHTML = `<h2 id="lawtitle">${esc(r.title)}</h2><h3>${esc(s.law)}</h3><p class="clause">${esc(s.clause)}</p><blockquote>${esc(s.text)}</blockquote>`;
-  $('lawbox').showModal();
+  showLawBox({ title: r.title, law: s.law, clause: s.clause, text: s.text });
 }
 
-function setView(m) {
-  api.setView(m);
-  $('v3d').classList.toggle('on', m === '3d'); $('v3d').setAttribute('aria-pressed', m === '3d');
-  $('vtop').classList.toggle('on', m === 'top'); $('vtop').setAttribute('aria-pressed', m === 'top');
-}
-
-function setTheme(dark) {
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('theme').textContent = dark ? 'โหมดสว่าง' : 'โหมดมืด';
-  api?.setTheme(dark);
-}
+let setView;
 
 async function start() {
-  $('credits').innerHTML = credits.map((c) => `<li>${esc(c.name)} by Polyfork (<a href="${esc(c.url)}" target="_blank" rel="noopener" style="color:inherit">${esc(c.url)}</a>), CC BY 4.0</li>`).join('');
-  const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('theme').textContent = dark ? 'โหมดสว่าง' : 'โหมดมืด';
+  renderCredits(credits);
+  const theme = initTheme((d) => api?.setTheme(d));
   api = await initScene($('view'));
-  api.setTheme(dark);
+  api.setTheme(theme.isDark());
+  setView = bindViewButtons(() => api);
   renderOthers();
   goStep(0);
-  $('theme').addEventListener('click', () => setTheme(document.documentElement.dataset.theme !== 'dark'));
-  $('v3d').addEventListener('click', () => setView('3d'));
-  $('vtop').addEventListener('click', () => setView('top'));
-  $('prev').addEventListener('click', () => goStep(stepIdx - 1));
-  $('next').addEventListener('click', () => goStep(stepIdx + 1));
-  $('stepbar').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) goStep(+b.dataset.i); });
+  bindStepNav(() => stepIdx, goStep);
   $('reset').addEventListener('click', () => {
     Object.assign(state, DEFAULTS);
     if (step().initial) applyInitial(step().initial);
