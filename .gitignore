@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vite/
+*.ppt
+*.pptx
+slides-png/
+.env
+*.local.json
+desktop.ini
+Thumbs.db

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ระยะร่นและที่ว่างรอบอาคาร</title>
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>ระยะร่นและที่ว่างรอบอาคาร</h1>
+    <p class="sub">บทตัวอย่าง · กฎหมายควบคุมอาคาร กทม.</p>
+  </div>
+  <button id="theme" class="btn" type="button" aria-label="สลับโหมดสว่าง/มืด">โหมดมืด</button>
+</header>
+
+<p class="warn" role="note">บทตัวอย่าง — ตัวเลขที่มีป้าย "จุดที่ต้องตรวจ" ยังไม่ยืนยัน ห้ามนำไปใช้งานจริง</p>
+
+<main>
+  <section class="lesson" aria-label="ขั้นของบท">
+    <div class="steps-head">
+      <p id="stepcount" class="stepcount" aria-live="polite"></p>
+      <div id="stepbar" class="stepbar" role="group" aria-label="เลือกขั้น"></div>
+    </div>
+    <h2 id="steptitle"></h2>
+    <p id="stepexplain" class="explain"></p>
+    <p id="stepslides" class="slides"></p>
+    <div class="nav">
+      <button id="prev" class="btn" type="button">ย้อนกลับ</button>
+      <button id="next" class="btn primary" type="button">ถัดไป</button>
+    </div>
+  </section>
+
+  <section class="stage" aria-label="ฉากจำลองที่ดิน">
+    <div id="view" class="view"></div>
+    <div class="viewbar" role="group" aria-label="มุมมอง">
+      <button class="btn seg on" id="v3d" type="button" aria-pressed="true">3 มิติ</button>
+      <button class="btn seg" id="vtop" type="button" aria-pressed="false">มองจากด้านบน</button>
+    </div>
+    <p class="hint">ลากเพื่อหมุน/เลื่อน · ล้อเมาส์หรือบีบนิ้วเพื่อซูม</p>
+  </section>
+
+  <section class="panel" aria-label="ตัวปรับค่า">
+    <div class="panel-head"><h2>ปรับค่า</h2><button class="btn" id="reset" type="button">เริ่มค่าใหม่</button></div>
+    <div id="sliders" class="sliders"></div>
+  </section>
+
+  <section class="results" aria-label="ผลการตรวจรายกฎ">
+    <h2>ผลตรวจรายกฎ</h2>
+    <p id="rulesnote" class="note"></p>
+    <ul id="rules" class="rules"></ul>
+  </section>
+
+  <section class="results others" id="others" aria-label="กฎอื่นในสไลด์ 52–69">
+    <h2>กฎอื่นในสไลด์ 52–69</h2>
+    <p class="note">กฎเหล่านี้ยังไม่มีภาพในฉาก อ่านเป็นเนื้อหาก่อน</p>
+    <ul id="otherlist" class="rules"></ul>
+  </section>
+</main>
+
+<footer class="credits">
+  <h2>เครดิตโมเดล 3 มิติ</h2>
+  <ul id="credits"></ul>
+</footer>
+<dialog id="lawbox" class="lawbox" aria-labelledby="lawtitle">
+  <div class="lawbox-in">
+    <div id="lawbody"></div>
+    <p class="lawnote">ข้อความถอดจากไฟล์ PDF อาจมีสระ/วรรณยุกต์คลาดเคลื่อน โปรดเทียบราชกิจจานุเบกษา</p>
+    <form method="dialog"><button class="btn primary" autofocus>ปิด</button></form>
+  </div>
+</dialog>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
