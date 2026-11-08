@@ -7,6 +7,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { OBJECTIVES, LAW_ACT_8, LAW_ACT_77_FRAGMENT, REVIEW_POINTS, ACT8_EXTRA, NO_EXAMPLE } from '../../src/content/objectives.js';
 import { LAYERS, PARTS, SCENE_ONLY } from '../../src/content/lesson01.js';
 import { CATALOG } from '../../src/content/catalog.js';
+import { OVERVIEW_FIGURE, OBJECTIVE_FIGURES, GENERIC_NOTE } from '../../src/content/lesson01-figures.js';
 
 const SLIDES_MD = new URL('../../ข้อความสไลด์-คำต่อคำ.md', import.meta.url);
 const TOC_MD = new URL('../../สารบัญเนื้อหา.md', import.meta.url);
@@ -75,6 +76,32 @@ test('ส่วนของอาคาร: อ้างข้อที่มี
   for (const o of OBJECTIVES) for (const id of o.parts || [o.part]) assert.ok(id === 'overall' || PARTS.some((p) => p.id === id), `ข้อ ${o.n} → ${id}`);
   for (const o of OBJECTIVES.filter((x) => x.examples.length)) assert.ok(PARTS.some((p) => p.objective === o.n), `ข้อ ${o.n} ไม่มีส่วนอาคารให้จับคู่`);
   assert.ok(SCENE_ONLY.length >= 1);
+});
+
+// ---------- รูปประกอบ ----------
+const FIG_DIR = new URL('../../assets/lessons/01/', import.meta.url);
+test('ทุกวัตถุประสงค์มีรูปประกอบ + รูปภาพรวม · ไฟล์มีอยู่จริง · กว้าง ~1200 px · เล็กกว่า 150 KB', () => {
+  assert.deepEqual(Object.keys(OBJECTIVE_FIGURES).map(Number), OBJECTIVES.map((o) => o.n));
+  for (const [id, f] of [['ภาพรวม', OVERVIEW_FIGURE], ...OBJECTIVES.map((o) => [`ข้อ ${o.n}`, OBJECTIVE_FIGURES[o.n]])]) {
+    const path = new URL(f.file, FIG_DIR);
+    assert.ok(existsSync(path), `${id}: ไม่พบไฟล์ ${f.file}`);
+    const buf = readFileSync(path);
+    assert.ok(buf.length < 150 * 1024, `${id}: ไฟล์ใหญ่เกิน 150 KB (${buf.length})`);
+    assert.equal(buf.toString('latin1', 0, 4), 'RIFF', `${id}: ไม่ใช่ WebP`);
+    assert.equal(buf.toString('latin1', 8, 12), 'WEBP', `${id}: ไม่ใช่ WebP`);
+    assert.ok(f.alt.length > 15 && f.caption.length > 10, `${id}: ไม่มี alt/คำบรรยาย`);
+  }
+});
+
+test('ข้อที่ไม่มีตัวอย่างในสไลด์ (5, 6) ต้องบอกใต้รูปว่าเป็นภาพประกอบทั่วไป · ข้ออื่นไม่ติดป้ายนี้', () => {
+  assert.equal(GENERIC_NOTE, 'ภาพประกอบทั่วไป — สไลด์ชุดนี้ยังไม่มีตัวอย่าง');
+  for (const o of OBJECTIVES) assert.equal(!!OBJECTIVE_FIGURES[o.n].generic, o.examples.length === 0, `ข้อ ${o.n}`);
+});
+
+test('หน้าบทที่ 1 ไม่โหลด three.js / ฉาก 3 มิติ (เป็นหน้าอ่านล้วน)', () => {
+  const imports = readFileSync(new URL('../../src/lesson/objectives/main.js', import.meta.url), 'utf8').match(/^import .*$/gm) || [];
+  assert.ok(imports.length >= 5);
+  for (const line of imports) assert.ok(!/three|scene|building\.js/.test(line), line);
 });
 
 // ---------- ตัวบท ----------

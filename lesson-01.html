@@ -18,38 +18,13 @@
 <p class="warn" role="note">ตัวอย่างแต่ละข้อดึงจากสไลด์อื่นในชุดเดียวกัน แต่การจัดว่าตัวอย่างไหนอยู่ใต้ข้อไหนยังรอเจ้าของงานยืนยัน — ดูหัวข้อ "จุดที่ต้องตรวจ" ท้ายหน้า</p>
 
 <main>
-  <section class="lesson" aria-label="ขั้นของบท">
-    <div class="steps-head">
-      <p id="stepcount" class="stepcount" aria-live="polite"></p>
-      <div id="stepbar" class="stepbar" role="group" aria-label="เลือกขั้น"></div>
-    </div>
-    <h2 id="steptitle"></h2>
-    <p id="stepexplain" class="explain"></p>
-    <p id="stepslides" class="slides"></p>
-    <div class="nav">
-      <button id="prev" class="btn" type="button">ย้อนกลับ</button>
-      <button id="next" class="btn primary" type="button">ถัดไป</button>
-    </div>
-  </section>
-
-  <section class="stage" aria-label="ฉากจำลองอาคารและบริเวณโดยรอบ">
-    <div id="view" class="view"></div>
-    <div id="markers" class="markers"></div>
-    <div class="viewbar" role="group" aria-label="มุมมอง">
-      <button class="btn seg on" id="v3d" type="button" aria-pressed="true">3 มิติ</button>
-      <button class="btn seg" id="vtop" type="button" aria-pressed="false">มองจากด้านบน</button>
-    </div>
-    <p class="hint">ลากเพื่อหมุน/เลื่อน · ล้อเมาส์หรือบีบนิ้วเพื่อซูม</p>
-  </section>
-
-  <section class="panel" aria-label="กิจกรรมของขั้นนี้">
-    <div id="activity" class="actbody"></div>
-  </section>
+  <section class="intro" id="overview" aria-label="ภาพรวมสไลด์ 1"></section>
+  <section id="cards" aria-label="วัตถุประสงค์ 7 ข้อ"></section>
 
   <section class="results" id="lawsrc" aria-label="ที่มาในตัวบท">
     <h2>ที่มาในตัวบท: มาตรา 8 เทียบกับสไลด์ 2</h2>
     <p class="note">พ.ร.บ.ควบคุมอาคาร พ.ศ. 2522 มาตรา 8 ให้รัฐมนตรีออกกฎกระทรวงกำหนดเรื่องต่างๆ "เพื่อประโยชน์แห่ง" รายการด้านล่าง · ตารางนี้เทียบถ้อยคำกับ 7 ข้อในสไลด์ 2</p>
-    <div id="matchtable"></div>
+    <div id="matchtable" class="tablewrap"></div>
     <p><button type="button" class="btn" id="lawbtn">ดูตัวบทมาตรา 8</button></p>
     <div id="linkbox" class="linkbox"></div>
   </section>
@@ -62,7 +37,7 @@
 </main>
 
 <footer class="credits">
-  <h2>เครดิตโมเดล 3 มิติ</h2>
+  <h2>เครดิตโมเดล 3 มิติ (ใช้วาดรูปประกอบ)</h2>
   <ul id="credits"></ul>
 </footer>
 <dialog id="lawbox" class="lawbox" aria-labelledby="lawtitle">
